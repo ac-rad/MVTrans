@@ -1,4 +1,4 @@
-# MVTrans: Multi-View Perception of Transparent Objects
+
 
 
 ![](media/main_image.jpg)
