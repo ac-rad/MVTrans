@@ -2,4 +2,4 @@ remote_theme: pages-themes/cayman@v0.2.0
 plugins:
 - jekyll-remote-theme # add this line to the plugins list if you already have one
 title: "MVTrans: Multi-View Perception of Transparent Objects"
-description: <a href="https://www.linkedin.com/in/yi-ru-helen-wang/" style="color:#606c71">Yi Ru Wang</a>, <a href="https://www.linkedin.com/in/yuchi-allan-zhao/" style="color:#606c71">Yuchi Zhao</a>, <a href="https://www.linkedin.com/in/haoping-xu-0b3b44a4/" style="color:#606c71" >Haoping Xu</a>, Sagi Eppel, Alan Aspuru-Guzik, Florian Shkurti, Animesh Garg
+description: <a href="https://www.linkedin.com/in/yi-ru-helen-wang/" style="color:#bfd6d8">Yi Ru Wang</a>, <a href="https://www.linkedin.com/in/yuchi-allan-zhao/" style="color:#bfd6d8">Yuchi Zhao</a>, <a href="https://www.linkedin.com/in/haoping-xu-0b3b44a4/" style="color:#bfd6d8" >Haoping Xu</a>, Sagi Eppel, Alan Aspuru-Guzik, Florian Shkurti, Animesh Garg
