@@ -1,0 +1,25 @@
+model_configs:
+  mode: multiview # multiview, stereo
+  batch_size: 8
+  num_workers: 8
+  optimizer:
+    type:
+    learning_rate: 0.01
+
+training_configs:
+  exp_name: test
+  num_epochs: 1
+  batch_size: 256
+  optimizer:
+    type: 'sgd'
+    learning_rate: 0.0001
+    momentum: 0.9
+    weight_decay: 0.1
+  checkpoints:
+    checkpoints_dir: /path/to/checkpoints
+    save_every_n: 5  # save every n epochs to model_n.pt
+    save_best: true  # save whenever validation loss reaches new low to model_best.pt
+    save_latest: true  # save every epoch to model_latest.pt
+  resolution: [640, 480]
+  loss:
+    
