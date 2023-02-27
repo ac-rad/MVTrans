@@ -1,6 +1,6 @@
 ## MVTrans: Multi-view Perception to See Transparent Objects (ICRA2023)
 
-[**Paper**](https://ac-rad.github.io/MVTrans/) | [**Project**](https://ac-rad.github.io/MVTrans/) | [**Video**](https://youtu.be/8Qdc_xWVp-k)
+[**Paper**](https://arxiv.org/abs/2302.11683) | [**Project**](https://ac-rad.github.io/MVTrans/) | [**Video**](https://youtu.be/8Qdc_xWVp-k)
 
 This repo contains the official implementation of the paper "MVTrans: Multi-view Perception to See Transparent Objects". 
 
