@@ -14,7 +14,7 @@ Setup a conda environment, install required packages, and download the repo:
 ``` 
 conda create -y --prefix ./env python=3.8
 ./env/bin/python -m pip install -r requirements.txt
-git clone https://github.com/ac-rad/transparent-perception.git
+git clone https://github.com/ac-rad/MVTrans.git
 ```
 Weights & Biases (wandb) is used to log and visualize training results. Please follow the [instruction](https://docs.wandb.ai/) to setup wandb. To appropriately log results to cloud, insert your wandb login key [here](https://github.com/ac-rad/transparent-perception/blob/main/net_train_multiview.py#L140) in the code. Otherwise, to log results locally, run the following command and access results at localhost:
 ```
