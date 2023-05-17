@@ -4,7 +4,7 @@ plugins:
 title: "MVTrans: Multi-View Perception of Transparent Objects"
 repository_url: "https://github.com/ac-rad/transparent-perception"
 show_arxiv: true
-arxiv_url: ""
+arxiv_url: "https://arxiv.org/abs/2302.11683"
 show_dataset: true
-dataset_url: ""
+dataset_url: "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP3/LQKTXE"
 description: <a href="https://www.linkedin.com/in/yi-ru-helen-wang/" style="color:#bfd6d8">Yi Ru Wang</a>, <a href="https://www.linkedin.com/in/yuchi-allan-zhao/" style="color:#bfd6d8">Yuchi Zhao</a>, <a href="https://www.linkedin.com/in/haoping-xu-0b3b44a4/" style="color:#bfd6d8" >Haoping Xu</a>, Sagi Eppel, Alan Aspuru-Guzik, Florian Shkurti, Animesh Garg
