@@ -1,14 +1,14 @@
 --max_steps=400000
---model_file=/home/sf3203ryzen/helen/transparent-perception/model/multiview_net.py
+--model_file=PATH_TO_REPO/model/multiview_net.py
 --network_type=multiview
 --num_multiview=2
 --num_samples=56
 --model_name=res_fpn
---output=/home/sf3203ryzen/helen/transparent-perception/runs/simnet_blender_multiview_a6000_1
---train_path=file:///home/sf3203ryzen/hdd/synthetic_dataset_pkl
+--output=OUTPUT_PATH
+--train_path=file://PATH_TO_TRAIN_SET
 --train_batch_size=5
 --train_num_workers=1
---val_path=file:///home/sf3203ryzen/hdd/synthetic_dataset_val_pkl
+--val_path=file://PATH_TO_VAL_SET
 --val_batch_size=1
 --val_num_workers=1
 --optim_learning_rate=0.0006
@@ -23,4 +23,4 @@
 --loss_rotation_mult=0.1
 --loss_heatmap_mult=100.0
 --loss_z_centroid_mult=0.1
---wandb_name=blender-multiview-neighbour-2view-a6000
+--wandb_name=JOB_NAME
