@@ -25,12 +25,9 @@ _NUM_NODES=2
 class EvalMethod():
 
   def __init__(self, mode = None):
-
     self.eval_3d = Eval3d()
     if mode == 'blender':
       self.camera_model = camera.BlenderCamera()
-    elif mode == 'simnet':
-      self.camera_model = camera.FMKCamera()
     else:
       raise ValueError
 
