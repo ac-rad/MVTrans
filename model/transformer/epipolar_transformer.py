@@ -12,6 +12,7 @@ class EpipolarTransformer(nn.Module):
     def __init__(self, input_channel, output_channel, kernel_size):
         super(EpipolarTransformer, self).__init__()
         self.softmax = torch.nn.Softmax(dim=-1)
+        # self.gamma = torch.nn.Parameter(torch.zeros(1))
 
         # filters used for gates
         gru_input_channel = input_channel + output_channel
@@ -80,3 +81,5 @@ class EpipolarTransformer(nn.Module):
         o = self.output(target_value, h, r, u)
         y = self.activation(o)
         return u * h + (1 - u) * y
+
+

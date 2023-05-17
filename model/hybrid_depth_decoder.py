@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
+
 from utils.homo_utils import *
 from model.transformer.epipolar_transformer import EpipolarTransformer
 from model.networks.layers_op import convbn, convbnrelu, convbn_3d, convbnrelu_3d, convbntanh_3d
@@ -16,8 +17,10 @@ def upsample(x):
 class ConvBlock(nn.Module):
     """Layer to perform a convolution followed by ELU
     """
+
     def __init__(self, in_channels, out_channels):
         super(ConvBlock, self).__init__()
+
         self.conv = convbn(in_channels, out_channels, 3, 1, 1, 1)
         self.nonlin = nn.ReLU(inplace=True)
 
@@ -39,6 +42,7 @@ class DepthHybridDecoder(nn.Module):
     def __init__(self, num_ch_enc, num_output_channels=1, use_skips=True,
                  ndepths=64, depth_max=10.0, IF_EST_transformer=True):
         super(DepthHybridDecoder, self).__init__()
+
         self.num_output_channels = num_output_channels
         self.use_skips = use_skips
         self.IF_EST_transformer = IF_EST_transformer
@@ -49,6 +53,7 @@ class DepthHybridDecoder(nn.Module):
 
         self.ndepths = ndepths
         self.depth_max = depth_max
+
         self.pixel_grid = None
 
         # decoder
@@ -78,15 +83,20 @@ class DepthHybridDecoder(nn.Module):
 
         self.dres0 = nn.Sequential(convbnrelu_3d(base_channels, base_channels, 3, 1, 1),
                                    convbnrelu_3d(base_channels, base_channels, 3, 1, 1))
+
         self.dres1 = nn.Sequential(convbnrelu_3d(base_channels, base_channels, 3, 1, 1),
                                    convbnrelu_3d(base_channels, base_channels, 3, 1, 1))
+        
         self.dres2 = nn.Sequential(convbnrelu_3d(base_channels + 1, base_channels + 1, 3, 1, 1))
+
         self.key_layer = nn.Sequential(convbnrelu_3d(base_channels + 1, base_channels // 2, 3, 1, 1))
         self.value_layer = nn.Sequential(convbntanh_3d(base_channels + 1, base_channels // 2, 3, 1, 1))
+
         self.stereo_head0 = nn.Sequential(
             convbnrelu_3d(base_channels // 2, base_channels // 2, 3, 1, 1),
             nn.Conv3d(base_channels // 2, 1, kernel_size=1, padding=0, stride=1, bias=True)
         )
+
         self.stereo_head1 = nn.Sequential(
             convbnrelu_3d(base_channels // 2, base_channels // 2, 3, 1, 1),
             nn.Conv3d(base_channels // 2, 1, kernel_size=1, padding=0, stride=1, bias=True)
@@ -95,6 +105,7 @@ class DepthHybridDecoder(nn.Module):
     def scale_cam_intr(self, cam_intr, scale):
         cam_intr_new = cam_intr.clone()
         cam_intr_new[:, :2, :] *= scale
+
         return cam_intr_new
 
     def collapse_num(self, x):
@@ -119,6 +130,7 @@ class DepthHybridDecoder(nn.Module):
                             depth_values, depth_min, depth_interval,
                             pre_costs=None, pre_cam_poses=None):
         """
+        try to make it faster
         :param costvolumes: list of [N,C,D,H,W]
         :param cam_poses: list of [N,4,4]
         :param cam_intr: [N,3,3]
@@ -126,9 +138,12 @@ class DepthHybridDecoder(nn.Module):
         :return:
         """
         num = len(costvolumes)
+
         B, C, D, H, W = costvolumes[0].shape
+
         depth_values_lowres = depth_values.repeat(1, 1, H, W)
         depth_values_highres = depth_values.repeat(1, 1, 4 * H, 4 * W)
+
         outputs = {}
 
         if self.pixel_grid is None:
@@ -165,7 +180,6 @@ class DepthHybridDecoder(nn.Module):
         # 3D matching guidance features
         matching_x = self.dres0(costvolumes)
         matching_x = self.dres1(matching_x)
-
         x = torch.cat([semantic_vs.unsqueeze(1), matching_x], dim=1)  # [B*num,33,D,H,W]
         x = self.dres2(x)
 
@@ -292,7 +306,6 @@ class DepthHybridDecoder(nn.Module):
             x += [semantic_features[3]]
         x = torch.cat(x, 1)
         x = self.upconv_4_1(x)
-
         # scale 3
         x = self.upconv_3_0(x)
         x = [upsample(x)]
@@ -309,12 +322,14 @@ class DepthHybridDecoder(nn.Module):
         x = torch.cat(x, 1)
         semantic_vs = self.upconv_2_1(x)  # after relu, [B*num, C, H, W]
 
+
         # stack cost volumes together
         costvolumes = torch.stack(costvolumes, dim=1)
         costvolumes = self.collapse_num(costvolumes)
         # 3D matching guidance features
         matching_x = self.dres0(costvolumes)
         matching_x = self.dres1(matching_x)
+
         x = torch.cat([semantic_vs.unsqueeze(1), matching_x], dim=1)  # [B*num,33,D,H,W]
         x = self.dres2(x)
 

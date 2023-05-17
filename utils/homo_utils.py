@@ -11,6 +11,7 @@ def set_id_grid(h, w):
     pixel_coords = torch.stack((j_range, i_range, ones), dim=1)  # [1, 3, H, W]
     return pixel_coords
 
+
 def check_sizes(input, input_name, expected):
     condition = [input.ndimension() == len(expected)]
     for i, size in enumerate(expected):
@@ -18,6 +19,8 @@ def check_sizes(input, input_name, expected):
             condition.append(input.size(i) == int(size))
     assert (all(condition)), "wrong size for {}, expected {}, got  {}".format(input_name, 'x'.join(expected),
                                                                               list(input.size()))
+
+
 def cam2cam(cam_1_coords, extrinsic):
     '''Transform 3D coordinates from cam 1 to cam 2
     :param cam_1_coords: [batch, 4, height, width]
@@ -30,6 +33,7 @@ def cam2cam(cam_1_coords, extrinsic):
     cam_2_coords = torch.bmm(extrinsic, cam_1_coords_flat)
     cam_2_coords = cam_2_coords.view(batch, 4, height, width)
     return cam_2_coords
+
 
 def pixel2cam(depth, intrinsics, pixel_coords, is_homogeneous=True):
     """Transform coordinates in the pixel frame to the camera frame. Camera model: [X,Y,Z]^T = D * K^-1 * [u,v,1]^T
@@ -55,6 +59,7 @@ def pixel2cam(depth, intrinsics, pixel_coords, is_homogeneous=True):
 
     return cam_coords
 
+
 def cam2pixel(cam_coords, intrinsics):
     '''Transforms coordinates in a camera frame to the pixel frame.
     :param cam_coords: [batch, 4, height, width]
@@ -72,6 +77,7 @@ def cam2pixel(cam_coords, intrinsics):
     y_norm = y / (z + 1e-10)
     pixel_coords = torch.stack([x_norm, y_norm], dim=2)  # [b,h*w, 2]
     return pixel_coords.view(b, h, w, 2)
+
 
 def cam2pixel_depth(cam_coords, intrinsics):
     '''Transforms coordinates in a camera frame to the pixel frame.
@@ -92,7 +98,6 @@ def cam2pixel_depth(cam_coords, intrinsics):
     X_norm_ = 2 * x_norm / (
             w - 1) - 1  # Normalized, -1 if on extreme left, 1 if on extreme right (x = w-1) [B, H*W]
     Y_norm_ = 2 * y_norm / (h - 1) - 1  # Idem [B, H, W]
-
     X_mask_ = ((X_norm_ > 1) + (X_norm_ < -1)).detach()
     Y_mask_ = ((Y_norm_ > 1) + (Y_norm_ < -1)).detach()
 
@@ -101,6 +106,7 @@ def cam2pixel_depth(cam_coords, intrinsics):
 
     pixel_coords = torch.stack([x_norm, y_norm, z], dim=2)  # [b,h*w, 3]
     return pixel_coords.view(b, h, w, 3), valid_mask
+
 
 def normalize_pixel_coords(pixel_coords, padding_mode='zeros', image_height=None, image_width=None):
     """
@@ -133,6 +139,7 @@ def normalize_pixel_coords(pixel_coords, padding_mode='zeros', image_height=None
 
     pixel_coords_norm = torch.stack([X_norm, Y_norm], dim=3)  # [B, H, W, 2]
     return pixel_coords_norm, valid_mask
+
 
 def normalize_pixel_coords_volume(pixel_coords, depth_min, depth_interval, padding_mode='zeros',
                                   image_height=None, image_width=None, ndepths=None, disp_min=None, disp_interval=None):
@@ -170,6 +177,7 @@ def normalize_pixel_coords_volume(pixel_coords, depth_min, depth_interval, paddi
     pixel_coords_norm = torch.stack([X_norm, Y_norm, Z_norm], dim=3)  # [B, ndepths, H*W, 3]
     pixel_coords_norm = pixel_coords_norm.view(batch_size, ndepths, image_height, image_width, 3)
     return pixel_coords_norm, valid_mask
+
 
 def inverse_warp(feat, depth, pose, intrinsics, pixel_coords, padding_mode='zeros'):
     """
@@ -397,6 +405,7 @@ def quat2mat(q):
     :param q:
     :return:
     '''
+
     w, x, y, z = q
     Nq = w * w + x * x + y * y + z * z
     if Nq < 1e-8:
@@ -431,6 +440,8 @@ def homo_warping(src_fea, src_proj, ref_proj, depth_values):
     height, width = src_fea.shape[2], src_fea.shape[3]
 
     with torch.no_grad():
+        # print(ref_proj)
+        # print(ref_proj.shape)
         proj = torch.matmul(src_proj, torch.inverse(ref_proj))
         rot = proj[:, :3, :3]  # [B,3,3]
         trans = proj[:, :3, 3:4]  # [B,3,1]

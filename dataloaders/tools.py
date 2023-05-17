@@ -1,8 +1,6 @@
 import OpenEXR
 import Imath
 import numpy as np
-
-
 def exr_loader(EXR_PATH, ndim=3):
     """Loads a .exr file as a numpy array
     Args:
@@ -42,4 +40,3 @@ def exr_loader(EXR_PATH, ndim=3):
         channel.shape = (size[1], size[0])  # Numpy arrays are (row, col)
         exr_arr = np.array(channel)
         return exr_arr
-        

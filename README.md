@@ -14,9 +14,9 @@ Setup a conda environment, install required packages, and download the repo:
 ``` 
 conda create -y --prefix ./env python=3.8
 ./env/bin/python -m pip install -r requirements.txt
-git clone https://github.com/ac-rad/transparent-perception.git
+git clone https://github.com/ac-rad/MVTrans.git
 ```
-Weights & Biases (wandb) is used to log and visualize training results. Please follow the [instruction](https://docs.wandb.ai/) to setup wandb. To appropriately log results to cloud, insert your wandb login key [here](https://github.com/ac-rad/transparent-perception/blob/main/net_train_multiview.py#L140) in the code. Otherwise, to log results locally, run the following command and access results at localhost:
+Weights & Biases (wandb) is used to log and visualize training results. Please follow the [instruction](https://docs.wandb.ai/) to setup wandb. To appropriately log results to cloud, insert your wandb login key in `net_train_multiview.py`. Otherwise, to log results locally, run the following command and access results at localhost:
 ```
 wandb offline
 ```
@@ -27,20 +27,27 @@ Our synthetic transparent object detection dataset (Syn-TODD) can be downloaded 
 ## Training
 To train MVTrans from scratch, modify the data path and output directory in configuration files under `config/`, and then run:
 ```
-./runner.sh net_train_multiview.py @config/net_config_blender_multiview_{NUM_OF_VIEW}.txt
+./runner.sh net_train_multiview.py @config/net_config_blender_multiview_{NUM_OF_VIEW}_train.txt
 ```
 
 ## Evaluation
 To run the evaluation, need to change modify the data path and output directory in configuration files under `config/`, and then run:
 ```
-./runner.sh net_train_multiview.py @config/net_config_blender_multiview_{NUM_OF_VIEW}.txt
+./runner.sh net_train_multiview.py @config/net_config_blender_multiview_{NUM_OF_VIEW}_eval.txt
 ```
 ## Inference
 To run the inference, launch jupyter notebook and run `inference.ipynb`.
 ## Citation
 Please cite our paper:
 ```
-citation{   }
+@misc{wang2023mvtrans,
+      title={MVTrans: Multi-View Perception of Transparent Objects}, 
+      author={Yi Ru Wang and Yuchi Zhao and Haoping Xu and Saggi Eppel and Alan Aspuru-Guzik and Florian Shkurti and Animesh Garg},
+      year={2023},
+      eprint={2302.11683},
+      archivePrefix={arXiv},
+      primaryClass={cs.RO}
+}
 ```
 
 ## Reference
