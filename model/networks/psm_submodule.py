@@ -5,11 +5,8 @@ import torch.utils.data
 from torch.autograd import Variable
 import torch.nn.functional as F
 import math
-
 from utils.homo_utils import *
-
 from model.networks.layers_op import convbn
-
 torch.backends.cudnn.benchmark = False
 
 

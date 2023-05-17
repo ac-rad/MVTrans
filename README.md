@@ -27,20 +27,27 @@ Our synthetic transparent object detection dataset (Syn-TODD) can be downloaded 
 ## Training
 To train MVTrans from scratch, modify the data path and output directory in configuration files under `config/`, and then run:
 ```
-./runner.sh net_train_multiview.py @config/net_config_blender_multiview_{NUM_OF_VIEW}.txt
+./runner.sh net_train_multiview.py @config/net_config_blender_multiview_{NUM_OF_VIEW}_train.txt
 ```
 
 ## Evaluation
 To run the evaluation, need to change modify the data path and output directory in configuration files under `config/`, and then run:
 ```
-./runner.sh net_train_multiview.py @config/net_config_blender_multiview_{NUM_OF_VIEW}.txt
+./runner.sh net_train_multiview.py @config/net_config_blender_multiview_{NUM_OF_VIEW}_eval.txt
 ```
 ## Inference
 To run the inference, launch jupyter notebook and run `inference.ipynb`.
 ## Citation
 Please cite our paper:
 ```
-citation{   }
+@misc{wang2023mvtrans,
+      title={MVTrans: Multi-View Perception of Transparent Objects}, 
+      author={Yi Ru Wang and Yuchi Zhao and Haoping Xu and Saggi Eppel and Alan Aspuru-Guzik and Florian Shkurti and Animesh Garg},
+      year={2023},
+      eprint={2302.11683},
+      archivePrefix={arXiv},
+      primaryClass={cs.RO}
+}
 ```
 
 ## Reference

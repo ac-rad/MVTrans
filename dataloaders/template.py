@@ -1,7 +1,6 @@
 import dataclasses
 from dataclasses import field
 import numpy as np
-import cv2
 import io
 import shortuuid
 from PIL import Image
@@ -39,7 +38,7 @@ class OBB:
   def compress(self):
     if self.compressed:
       return
-    # Heat map 
+    # Heat map scale by 4x and quantize
     height, width = self.heat_map.shape
     self.heat_map = self.heat_map.astype(np.float16)
     self.vertex_target = self.vertex_target.transpose(2, 0, 1).astype(np.float16)
@@ -49,7 +48,7 @@ class OBB:
     if not self.compressed:
       return
 
-    # Heatmap 
+    # Heat map scale by 4x and quantize
     height, width = self.heat_map.shape
     self.heat_map = self.heat_map.astype(np.float32)
 
@@ -57,7 +56,6 @@ class OBB:
     # downstream compression 50x more effective)
     self.vertex_target = self.vertex_target.astype(np.float32).transpose(1, 2, 0)
     self.compressed = False
-
 
 @dataclasses.dataclass
 class Detection:
@@ -73,12 +71,12 @@ class Detection:
   obj_CAD: int = 0
   object_name: str = ''
 
-
 def compress_color_image(img, quality=90):
   with io.BytesIO() as buf:
     img = Image.fromarray(img)
     img.save(buf, format='jpeg', quality=quality)
     return buf.getvalue()
+
 
 def decompress_color_image(img_bytes):
   with io.BytesIO(img_bytes) as buf:
@@ -124,7 +122,7 @@ class Panoptic:
   scene_name: str = 'sim'
   uid: str = dataclasses.field(default_factory=get_uid)
   compressed: bool = False
-  
+
   def compress(self):
     self.stereo.compress()
     for object_pose in self.object_poses:
@@ -133,7 +131,7 @@ class Panoptic:
     if self.compressed:
       return
 
-    # Depth map
+    # Depth scale by 4x and quantize
     height, width = self.depth.shape
     self.depth = self.depth.astype(np.float16)
     self.compressed = True
@@ -146,7 +144,7 @@ class Panoptic:
     if not self.compressed:
       return
 
-    # depth map
+    # Depth scale by 4x and quantize
     height, width = self.depth.shape
     self.depth = self.depth.astype(np.float32)
     self.compressed = False
@@ -161,6 +159,7 @@ def decompress_datapoint(cbuf, disable_final_decompression=False):
 
 
 class LocalReadHandle:
+
   def __init__(self, dataset_path, uid):
     self.dataset_path = dataset_path
     self.uid = uid

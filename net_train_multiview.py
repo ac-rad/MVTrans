@@ -1,31 +1,29 @@
-import sys
 import os
+os.environ['PYTHONHASHSEED'] = str(1)
 import argparse
-from importlib.machinery import SourceFileLoader
-import sys
 import random
+random.seed(12345)
 import numpy as np
+np.random.seed(12345)
 import torch
+torch.manual_seed(12345)
 import wandb
 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning import loggers
 
-from simnet.lib.net import common
-from simnet.lib import datapoint, camera
-from simnet.lib.net.post_processing.eval3d import Eval3d, extract_objects_from_detections
-from simnet.lib.net.panoptic_trainer import PanopticModel
+from src.lib.net import common
+from src.lib import datapoint, camera
+from src.lib.net.post_processing.eval3d import Eval3d, extract_objects_from_detections
+from src.lib.net.panoptic_trainer import PanopticModel
 
-os.environ['PYTHONHASHSEED'] = str(1)
-np.random.seed(12345)
-random.seed(12345)
-torch.manual_seed(12345)
-
-_GPU_TO_USE = -1
+_GPU_TO_USE = [0]
 _NUM_NODES=2
 
+
 class EvalMethod():
+
   def __init__(self, mode = None):
 
     self.eval_3d = Eval3d()
@@ -100,11 +98,11 @@ if __name__ == "__main__":
     val_ds = datapoint.make_dataset(hparams.val_path)
   elif training_mode == 'blender':
     if hparams.network_type == 'multiview':
-      train_ds = datapoint.make_dataset(hparams.train_path, dataset = 'blender', multiview = True, num_multiview = hparams.num_multiview, num_samples = hparams.num_samples)
-      val_ds = datapoint.make_dataset(hparams.val_path, dataset = 'blender', multiview = True, num_multiview = hparams.num_multiview, num_samples = hparams.num_samples)
+      train_ds = datapoint.make_dataset(hparams.train_path, dataset ='blender', multiview = True, num_multiview = hparams.num_multiview, num_samples = hparams.num_samples)
+      val_ds = datapoint.make_dataset(hparams.val_path, dataset ='blender', multiview = True, num_multiview = hparams.num_multiview, num_samples = hparams.num_samples)
     elif hparams.network_type == 'simnet':
-      train_ds = datapoint.make_dataset(hparams.train_path, dataset = 'blender')
-      val_ds = datapoint.make_dataset(hparams.val_path, dataset = 'blender')
+      train_ds = datapoint.make_dataset(hparams.train_path, dataset ='blender')
+      val_ds = datapoint.make_dataset(hparams.val_path, dataset ='blender')
     else:
       raise ValueError
 
@@ -121,7 +119,7 @@ if __name__ == "__main__":
   print('Epochs:', epochs)
 
   # Login to wandb
-  wandb.login(key='WANDB_KEY')
+  wandb.login(key='YOUR_KEY')
 
   model = PanopticModel(hparams = hparams, 
                         epochs = epochs, 
@@ -135,32 +133,34 @@ if __name__ == "__main__":
   # Make output folder if doesn't exist
   if not os.path.exists(hparams.output):
     os.mkdir(hparams.output)
-  # load checkpoints if exist 
   latest_ckpt = GetLatestCheckpoint(out_folder = hparams.output)
   if not latest_ckpt:
-    print("Training from scratch...")
     trainer = pl.Trainer(
       accelerator="gpu",
       max_epochs=epochs,
       gpus=_GPU_TO_USE,
       checkpoint_callback=model_checkpoint,
       default_root_dir = hparams.output,
+      #val_check_interval=0.7,
       check_val_every_n_epoch=1,
       logger=wandb_logger,
       strategy='ddp',
+      detect_anomaly=True,
       )
   else:
-    print('Training from checkpoint...')
+    print('TRAINING FROM CHECKPOINT!!!!!!!!!!!!!!')
     trainer = pl.Trainer(
       accelerator="gpu",
       max_epochs=epochs,
       gpus=_GPU_TO_USE,
       checkpoint_callback=model_checkpoint,
       default_root_dir = hparams.output,
+      #val_check_interval=0.7,
       check_val_every_n_epoch=1,
       logger=wandb_logger,
       resume_from_checkpoint = latest_ckpt,
       strategy='ddp',
+      detect_anomaly=True,
     )
   
   trainer.fit(model)

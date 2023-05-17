@@ -1,11 +1,9 @@
-import sys
 import cv2
 import numpy as np
 import torch
 from torch.utils.data import Dataset
 import os
 from PIL import Image
-import OpenEXR
 from glob import glob
 import json
 from scipy.stats import multivariate_normal
@@ -13,11 +11,9 @@ import pickle
 import zstandard as zstd
 import copy
 import operator
-import Imath
-from collections import defaultdict
 
-from simnet.lib.net.post_processing import obb_outputs, depth_outputs, segmentation_outputs
-from dataloaders.template import Panoptic, Stereo, Pose, Keypoint, OBB, LocalReadHandle, Detection
+from src.lib.net.post_processing import obb_outputs, depth_outputs, segmentation_outputs
+from dataloaders.template import Panoptic, Stereo, OBB, LocalReadHandle, Detection
 from dataloaders.tools import exr_loader
 
 
@@ -44,8 +40,8 @@ def create_anaglyph(stereo_dp):
   image = image.transpose((2, 0, 1))
   return torch.from_numpy(np.ascontiguousarray(image)).float()
 
-
 class BlenderLocalDataset:
+
   def __init__(self, dataset_path, multiview = False, num_views = 2, num_samples = 56):
     assert os.path.isdir(dataset_path), f'dataset_path is {dataset_path}, which does not exist'
     self.dataset_path = dataset_path
@@ -71,6 +67,7 @@ class BlenderLocalDataset:
     if not disable_final_decompression:
       x.decompress()
     return x
+
 
   def LoadColor(self, file_path, camera):
     left_img = Image.open(os.path.join(file_path, f"Camera_{camera}_EmptyVessel_Frame_0_RGB_L.jpg"))
@@ -108,13 +105,16 @@ class BlenderLocalDataset:
       
     return depth
   
+
   def LoadSegmentation(self, file_path, camera, dimension = (480, 640)):
+
     '''
     Returns a single segmentation map with all objects
     file_path: str
     camera: int
     dimension: tuple(y, x)
     '''
+
     def GetBWColourScheme(num_colors):
       '''
       Computes an array of evenly spaced floats
@@ -190,7 +190,6 @@ class BlenderLocalDataset:
       # Reshape masks into images
       obj_mask = obj_mask.reshape(dimension)
       rgb_seg = rgb_seg.reshape(dimension + (3,))
-
       assert obj_mask.shape == rgb_seg.shape[0:2], f'Incorrect shape, expected {rgb_seg.shape[0:2]}, got {obj_mask.shape}'
 
       # Fill object mask with a unique number
@@ -212,10 +211,8 @@ class BlenderLocalDataset:
     segmentation = table_mask
     for i in obj_masks:
       segmentation = segmentation + i
-
     semantic_segmentation = segmentation.copy()
     semantic_segmentation[semantic_segmentation>=2] = 2.
-
     return segmentation, semantic_segmentation # 0 = background; 1 = table; 2:n = objects
   
   def resize_with_pad(im, target_width, target_height, colour):
@@ -247,6 +244,8 @@ class BlenderLocalDataset:
       return np.array(background.convert('RGB'))
     else:
       raise ValueError(f'Image channels is invalid, received {im.mode}')
+    
+      
 
   def ReshapeArray(self, old_array, new_shape, color = (255,0,0)):
     old_image_height, old_image_width, channels = old_array.shape
@@ -278,7 +277,9 @@ class BlenderLocalDataset:
       heatmap_combined[mask] = heat_map[mask]
     return heatmap_combined
 
+
   def GetHeatMap(self, mask, dimensions = (480,640)):
+    
     # Check if object present in scene
     if np.sum(mask) == 0:
       return None
@@ -312,13 +313,14 @@ class BlenderLocalDataset:
     except Exception as e:
       print(f'error in Multivariate Normal, mean {mean_value}, cov {cov}')
       return None
-
     # Compute probability density function for all coordinate values
     density = multi_var.pdf(coords)
 
     # Build heatmap
     heat_map = np.zeros(mask.shape)
     heat_map[coords[:, 0], coords[:, 1]] = density
+
+    # TODO: Reshape heatmap if necessary
     if heat_map.shape != dimensions:
       new_heatmap = self.ReshapeArray(self, old_array = heat_map, new_shape = dimensions, color = (255,0,0))
       return new_heatmap / np.max(new_heatmap)
@@ -337,6 +339,7 @@ class BlenderLocalDataset:
       for box_idx, bbox, heatmap in zip(range(len(boxes)), boxes, heatmaps):
         disp_field = np.zeros([H, W, 2])
         vertex_point = np.array([bbox[i][1], bbox[i][0]])
+
         mask = (heatmap_indices == box_idx)
         disp_field[mask] = coords[mask] - vertex_point
         # Normalize by height and width
@@ -385,6 +388,7 @@ class BlenderLocalDataset:
     camera_intrinsic = np.array(camera_annotations['camera_intrinsic'])
     for object in camera_annotations.keys():
       object_annotations = camera_annotations[object]
+
       if 'transparent' in object:
         object = object.split('transparent_')[-1]
       elif object in to_ignore:
@@ -436,8 +440,10 @@ class BlenderLocalDataset:
     heatmaps_combined = self.CombineHeatmap(heatmaps)
     # Compute vertex array
     vertex_field = self.compute_vertex_field(heatmaps = heatmaps, boxes = boxes)
+
     # Compute covariance matrix
     covariance_matrix = self.compute_rotation_field(cov_matricies = cov_matricies, heat_maps = heatmaps, threshold=0.3)
+
     # Compute z_centroid matrix
     z_centroid_matrix = self.compute_z_centroid_field(z_vals = z_centroids, heatmaps = heatmaps)
 
@@ -460,6 +466,7 @@ class BlenderLocalDataset:
     return poses
 
   def LoadDetections(self, file_path, camera, img_size = (512,640)):
+
     # Open json & load object poses as seen in the camera coordinates
     f = open(os.path.join(file_path, 'BoundingBox.json'))
     data = json.load(f)
@@ -467,11 +474,14 @@ class BlenderLocalDataset:
 
     # Get annotations for particular camera
     camera_annotations = data[f'Camera_{camera}']
+
     not_in_scene = list()
+    # boxes = list()
     detections = list()
     to_ignore = ['focal_length', 'camera_intrinsic', 'camera_location', 'quaternion_WXYZ', 'camera_extrinsic', 'sensor_width', 'sensor_height', 'sensor_fit', 'resolution_y', 'resolution_x', 'baseline']
     for object in camera_annotations.keys():
       object_annotations = camera_annotations[object]
+
       if 'transparent' in object:
         object = object.split('transparent_')[-1]
       elif object in to_ignore:
@@ -486,6 +496,7 @@ class BlenderLocalDataset:
       individual_segmentation = self.segmentation_ind[object]
       # Get the heatmap
       obj_heatmap = self.GetHeatMap(mask = individual_segmentation, dimensions = img_size)
+
       # Check if obj_heatmap is none, if none means object not in frame; remove object
       if isinstance(obj_heatmap, type(None)):
         not_in_scene.append(object)
@@ -506,7 +517,6 @@ class BlenderLocalDataset:
                 scale_matrix = np.zeros((4,4)), object_name = object,
                 bbox = bbox)
       detections.append(detection)
-
     x,y = np.where(self.segmentation_ind['table_mask'])
     top_left = [x.min(), y.min()]
     bottom_right = [x.max(), y.max()]
@@ -528,7 +538,6 @@ class BlenderLocalDataset:
     camera_annotations = data[f'Camera_{camera}']
 
     # Make the dictionary
-
     camera_params = {}
     camera_params_str = ['focal_length', 'camera_intrinsic', 'camera_location', 'quaternion_WXYZ', 'camera_extrinsic', 'sensor_width', 'sensor_height', 'sensor_fit', 'resolution_y', 'resolution_x', 'baseline']
     for object in camera_annotations.keys():
@@ -545,7 +554,7 @@ class BlenderLocalDataset:
       start_at = start_at if start_at else 0
       end_at = end_at if end_at else len(scene_paths)
       scene_paths = scene_paths[start_at:end_at]
-    cams_to_select = range(56)  # in origanl branch
+    cams_to_select = range(56)
 
     for path_num, path in enumerate(scene_paths):
       uid = int(path.split('/')[-1])
@@ -578,7 +587,6 @@ class BlenderLocalDataset:
                                   uid = uid*100 + int(cam),
                                   compressed = False,
                                   camera_params = camera_params)
-          
           if save_pkl:
             self.write(datapoint)
           else:
@@ -629,14 +637,14 @@ class BlenderLocalDataset:
     with open(path, 'wb') as fh:
       fh.write(buf)
 
-
 class BlenderDataset(Dataset):
+
   def __init__(self, dataset_uri, hparams, preprocess_image_func=None, datapoint_dataset=None):
     super().__init__()
+
     if datapoint_dataset is None:
-      datapoint_dataset = BlenderLocalDataset('DATA_PATH')
+      datapoint_dataset = BlenderLocalDataset('/h/helen/transparent-perception/synthetic_dataset')
     self.datapoint_handles = datapoint_dataset.list()
-    # No need to shuffle, already shufled based on random uids
     self.hparams = hparams
     if preprocess_image_func is None:
       self.preprocces_image_func = create_anaglyph
@@ -666,3 +674,33 @@ class BlenderDataset(Dataset):
     kp_target = None
     scene_name = dp.scene_name
     return anaglyph, segmentation_target, depth_target, pose_target, box_target, kp_target, dp.detections, scene_name
+
+
+def plot(data,index, postfix = 'depth'):
+  from matplotlib import pyplot as plt
+  print('Plotting')
+  print('UNIQUE', np.unique((((data-np.amin(data))/(np.amax(data) - np.amin(data)))*255).astype(np.uint8)))
+  plt.imshow((((data-np.amin(data))/(np.amax(data) - np.amin(data)))*255).astype(np.uint8), interpolation='nearest')
+  plt.savefig(f'/h/helen/transparent-perception/tests/{index}_{postfix}.png')
+  plt.close()
+
+if __name__ == '__main__':
+  train_ds = BlenderLocalDataset('/home/chemrobot/hdd/helen/synthetic_dataset_val')
+  ds_items = train_ds.list(save_pkl = True, start_at = 4, end_at = 50)
+
+  visualize_depth = False
+  visualize_seg = False
+  if visualize_depth:
+    for i in range(0, len(ds_items)):
+      if np.isnan(ds_items[i].depth).any():
+        print('Has NAN')
+      if np.isinf(ds_items[i].depth).any():
+        print('Has INF')
+      if (ds_items[i].depth > 3).any():
+        print('HAS LARGE VALS')
+        ds_items[i].depth[ds_items[i].depth > 3] = 3.
+
+  if visualize_seg:
+    for i in range(0, len(ds_items)):
+      print(np.unique(ds_items[i].segmentation))
+      plot(ds_items[i].segmentation, ds_items[i].uid, postfix = 'segmentation')

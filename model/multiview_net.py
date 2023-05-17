@@ -1,20 +1,18 @@
-import sys
-import collections
-import numpy as np
 import torch
 import torch.nn as nn
-from torch.nn import functional as F
-from simnet.lib.net.models import simplenet
-from simnet.lib.net.post_processing import segmentation_outputs, depth_outputs, pose_outputs, obb_outputs
+
+from src.lib.net.models import simplenet
+from src.lib.net.post_processing import depth_outputs
+from src.lib.net.models.panoptic_net import DepthHead, OBBHead, SegmentationHead, ShapeSpec
 from model.networks.psm_submodule import psm_feature_extraction
 from model.networks.resnet_encoder import ResnetEncoder
-from simnet.lib.net.models.panoptic_net import DepthHead, OBBHead, SegmentationHead, ShapeSpec
 from model.hybrid_depth_decoder import DepthHybridDecoder
-from utils.homo_utils import homo_warping
 from model.networks.layers_op import convbn_3d, convbnrelu_3d
+from utils.homo_utils import homo_warping
 
 
 class MultiviewBackbone(nn.Module):
+
   def __init__(self, hparams, in_channels=3):
     super().__init__()
 
@@ -51,8 +49,8 @@ class MultiviewBackbone(nn.Module):
 
     self.rgbd_backbone = make_rgbd_backbone()
     self.reduce_channel = torch.nn.Conv2d(256, 32, 1)   
-
   def forward(self, img_features, small_disp, robot_joint_angles=None):
+    small_disp = small_disp #self.stereo_stem.forward(stacked_img[:, 0:3], stacked_img[:, 3:6])
     left_rgb_features = self.reduce_channel(img_features)
     disp_features = self.disp_features(small_disp)
     rgbd_features = torch.cat((disp_features, left_rgb_features), axis=1)
@@ -62,6 +60,7 @@ class MultiviewBackbone(nn.Module):
 
 
 class MultiviewNet(nn.Module):
+
   def __init__(self, hparams, ndepths=64, depth_min=0.01, depth_max=10.0, resnet=50):
     super().__init__()
     self.hparams = hparams
@@ -73,11 +72,9 @@ class MultiviewNet(nn.Module):
     # the to.(torch.float32) is required, if not will be all zeros
     self.depth_cands = torch.arange(0, ndepths, requires_grad=False).reshape(1, -1).to(
             torch.float32) * self.depth_interval + self.depth_min
-
     self.matchingFeature = psm_feature_extraction()
     self.semanticFeature = ResnetEncoder(resnet, "pretrained")  # the features after bn and relu
     self.multiviewBackbone = MultiviewBackbone(hparams)
-
     self.stage_infos = {
             "stage1": {
                 "scale": 4.0,
@@ -98,6 +95,7 @@ class MultiviewNet(nn.Module):
                                              num_output_channels=1, use_skips=True,
                                              ndepths=self.ndepths, depth_max=self.depth_max,
                                              IF_EST_transformer=False)
+
 
     # self.backbone = MultiviewBackbone(hparams)
     # ResFPN used p2,p3,p4,p5 (64 channels)
@@ -139,8 +137,8 @@ class MultiviewNet(nn.Module):
     num_views = len(features)
     ref_feature = features[0]
     ref_cam_pose = cam_poses[:, 0, :, :]
-    ref_extrinsic = torch.inverse(ref_cam_pose)
 
+    ref_extrinsic = torch.inverse(ref_cam_pose)
     # step 2. differentiable homograph, build cost volume
     ref_volume = ref_feature.unsqueeze(2).repeat(1, 1, self.ndepths, 1, 1)
     costvolume = torch.zeros_like(ref_volume).to(ref_volume.dtype).to(ref_volume.device)
@@ -150,7 +148,6 @@ class MultiviewNet(nn.Module):
         src_fea = features[view_i]
         src_cam_pose = cam_poses[:, view_i, :, :]
         src_extrinsic = torch.inverse(src_cam_pose)
-        
         # warpped features
         src_proj_new = src_extrinsic.clone()
         ref_proj_new = ref_extrinsic.clone()
@@ -168,11 +165,13 @@ class MultiviewNet(nn.Module):
         src_extrinsic = src_extrinsic.to('cuda')
 
         warped_volume = homo_warping(src_fea, src_proj_new, ref_proj_new, depth_values)
+
+        # it seems that ref_volume - warped_volume not good
         x = torch.cat([ref_volume, warped_volume], dim=1)
         x = self.pre0(x)
         x = x + self.pre2(self.pre1(x))
-        costvolume = costvolume + x
 
+        costvolume = costvolume + x
     # aggregate multiple feature volumes by variance
     costvolume = costvolume / (num_views - 1)
     del warped_volume
@@ -180,13 +179,12 @@ class MultiviewNet(nn.Module):
     return costvolume
 
   def scale_cam_intr(self, cam_intr, scale):
-    # print(cam_intr[0])
     cam_intr_new = cam_intr[0].clone()
     cam_intr_new[:, :2, :] *= scale
-    
     cam_intr_new[:, :2, :] *= scale
-    return cam_intr_new
 
+
+    return cam_intr_new
   def forward(self, imgs, cam_poses, cam_intr, pre_costs=None, pre_cam_poses=None, mode='train'):
     """
         input seqs (0,1,2,3,4) target view will be (1,2,3) or input three views
@@ -202,13 +200,18 @@ class MultiviewNet(nn.Module):
 
     height = height_img // 4
     width = width_img // 4
+
     assert views_num >= 2, f'View number should be greater 1, but is {views_num}'  # the views_num should be larger than 2
 
     target_num = 0
+
+    # Convert list of tensors to tensor
     assert len(cam_poses.shape) == 4, f'expected shape to be len 4, got {cam_poses.shape}'
 
     matching_features = self.matchingFeature(imgs.view(batch_size * views_num, 3, height_img, width_img))
+
     matching_features = matching_features.view(batch_size, views_num, -1, height, width)
+
     matching_features = matching_features.permute(1, 0, 2, 3, 4).contiguous()
 
     semantic_features = self.semanticFeature(
@@ -218,6 +221,7 @@ class MultiviewNet(nn.Module):
 
     depth_values = self.depth_cands.view(1, self.ndepths, 1, 1
                                              ).repeat(batch_size, 1, 1, 1).to(imgs.dtype).to(imgs.device)
+
     target_cam_poses = []
 
     # Get the cost volume
@@ -237,12 +241,17 @@ class MultiviewNet(nn.Module):
                                                             pre_cam_poses = pre_cam_poses,
                                                             mode = mode)
 
+    # Convert depth to desired shape
+
     # Output a small displacement output (H/4, W/4)
     small_disp_output = outputs[("depth", 0, 2)]
+
     assert len(small_disp_output.shape) == 4, f'Expecting depth to be Nx1xHxW, but got {small_disp_output.shape}'
 
-    # Get Features
-    features = self.multiviewBackbone(img_features = semantic_features[1], mall_disp = small_disp_output)
+    # Get RGB Features
+    features = self.multiviewBackbone(img_features = semantic_features[1],
+                                    small_disp = small_disp_output)
+
     small_disp_output = small_disp_output.squeeze(dim=1)
     if self.hparams.frozen_stereo_checkpoint is not None:
       small_disp_output = small_disp_output.detach()
