@@ -22,7 +22,7 @@ wandb offline
 ```
 
 ## Dataset
-Our synthetic transparent object detection dataset (Syn-TODD) can be downloaded at [here](https://ac-rad.github.io/MVTrans/). 
+Our synthetic transparent object detection dataset (Syn-TODD) can be downloaded at [here](https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP3/LQKTXE). 
 
 ## Training
 To train MVTrans from scratch, modify the data path and output directory in configuration files under `config/`, and then run:
