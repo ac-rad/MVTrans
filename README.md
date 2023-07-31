@@ -24,6 +24,16 @@ wandb offline
 ## Dataset
 Our synthetic transparent object detection dataset (Syn-TODD) can be downloaded at [here](https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP3/LQKTXE). 
 
+## Pre-trained Model
+
+We provide pre-trained model weight for MVTrans trained on Syn-TODD dataset.
+
+| Model views | Link |
+|-------------|------|
+| 2 views     |  [here](https://borealisdata.ca/api/access/datafile/632196)    |
+| 3 views     |  [here](https://borealisdata.ca/api/access/datafile/632197)    |
+| 5 views     |  [here](https://borealisdata.ca/api/access/datafile/632195)    |
+
 ## Training
 To train MVTrans from scratch, modify the data path and output directory in configuration files under `config/`, and then run:
 ```
